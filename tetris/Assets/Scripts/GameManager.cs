@@ -8,19 +8,24 @@ public class GameManager : MonoBehaviour
     Spawner spawner; //スポナー
     Block activeBlock; //生成されたブロック格納
 
+
     [SerializeField]
-    private float dropInterval = 0.25f;//次にブロックが落ちるまでのインターバル時間
-    float nextdropTimer;//次にブロックが落ちるまでの時間
+    private float dropInterval = 0.25f;//ブロックが落ちていく間隔（時間的に）
+    float nextdropTimer;//次にブロックが落ちるまでの時間(Time.timeがこの値を越えたらブロックが一段分落ちる)
 
 
     Board board; //ボードのスクリプトを格納
 
-    //入力受付タイマー
-    float nextKeyDownTimer, nextKeyLeftRightTimer, nextKeyRotateTimer;
 
-    //入力インターバル
+
+    //入力受付タイマー
+    float nextKeyDownTime, nextKeyLeftRightTime, nextKeyRotateTime, nextKeyHardUpTime;
+
+    //入力インターバル(カチャカチャ押されても一定間隔処理を置くためや、同時押下を防ぐための変数)
     [SerializeField]
-    private float nextKeyDownInterval, nextKeyLeftRightInterval, nextKeyRotateInterval;
+    private float nextKeyDownInterval, nextKeyLeftRightInterval, nextKeyRotateInterval, nextKeyHardUpInterval;
+
+
 
     //パネルの格納
     [SerializeField]
@@ -29,7 +34,6 @@ public class GameManager : MonoBehaviour
     //ゲームオーバー判定
     bool gameOver;
 
-    // Start is called before the first frame update
 
     void Start()
     {
@@ -42,14 +46,17 @@ public class GameManager : MonoBehaviour
         spawner.transform.position = Rounding.Round(spawner.transform.position);
 
         //タイマーの初期設定
-        nextKeyDownTimer = Time.time + nextKeyDownInterval;
-        nextKeyLeftRightTimer = Time.time + nextKeyLeftRightInterval;
-        nextKeyRotateTimer = Time.time + nextKeyRotateInterval;
+        nextKeyDownTime = Time.time + nextKeyDownInterval;
+        nextKeyLeftRightTime = Time.time + nextKeyLeftRightInterval;
+        nextKeyRotateTime = Time.time + nextKeyRotateInterval;
+        nextKeyHardUpTime = Time.time + nextKeyHardUpInterval;
 
         //スポナークラスからブロック生成関数を読んで変数に格納する
         if (!activeBlock)
         {
+            spawner.SetNextBlock(); 
             activeBlock = spawner.SpawnBlock();
+            spawner.SetNextBlock();
         }
 
         //ゲームオーバーの非表示設定
@@ -59,6 +66,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
     // Update is called once per frame
     void Update()
     {
@@ -67,79 +75,72 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        PlayerInput();
-
-        ////Updateで時間の判定をして判定次第で落下関数を呼ぶ
-        //if(Time.time > nextdropTimer)
-        //{
-        //    nextdropTimer = Time.time + dropInterval;
-
-        //    if (activeBlock)
-        //    {
-        //        activeBlock.MoveDown();
-
-        //        //UpdateでBoardクラスの関数を呼び出してボードから出ていないか確認
-        //        if (!board.CheckPosition(activeBlock))
-        //        {
-        //            activeBlock.MoveUp();
-
-        //            board.SaveBlockInGrid(activeBlock);
-
-        //            activeBlock = spawner.SpawnBlock();
-        //        }
-        //    }
-        //}
-        
+        PlayerInput();      
     }
 
     //キーの入力を検知してブロックを動かす関数
     void PlayerInput()
     {
-        if (Input.GetKey(KeyCode.D) && (Time.time > nextKeyLeftRightTimer)
+        if (Input.GetKey(KeyCode.D) && (Time.time > nextKeyLeftRightTime) //右移動
             || Input.GetKeyDown(KeyCode.D))
         {
             activeBlock.MoveRight(); //右に動かす
 
-            nextKeyLeftRightTimer = Time.time + nextKeyLeftRightInterval;
+            nextKeyLeftRightTime = Time.time + nextKeyLeftRightInterval;
 
             if (!board.CheckPosition(activeBlock))
             {
                 activeBlock.MoveLeft();
             }
         }
-        else if (Input.GetKey(KeyCode.A) && (Time.time > nextKeyLeftRightTimer)
+        else if (Input.GetKey(KeyCode.A) && (Time.time > nextKeyLeftRightTime) //左移動
             || Input.GetKeyDown(KeyCode.A))
         {
             activeBlock.MoveLeft(); //左に動かす
 
-            nextKeyLeftRightTimer = Time.time + nextKeyLeftRightInterval;
+            nextKeyLeftRightTime = Time.time + nextKeyLeftRightInterval;
 
             if (!board.CheckPosition(activeBlock))
             {
                 activeBlock.MoveRight();
             }
         }
-        else if (Input.GetKey(KeyCode.E) && (Time.time > nextKeyRotateTimer))
+        else if (Input.GetKey(KeyCode.X) && (Time.time > nextKeyRotateTime)) //右回転
         {
             activeBlock.RotateRight();
-            nextKeyRotateTimer = Time.time + nextKeyRotateInterval;
+            nextKeyRotateTime = Time.time + nextKeyRotateInterval;
 
             if (!board.CheckPosition(activeBlock))
             {
                 activeBlock.RotateLeft();
             }
         }
-        else if (Input.GetKey(KeyCode.S) && (Time.time > nextKeyDownTimer)
-            || (Time.time > nextdropTimer)) 
+        else if (Input.GetKey(KeyCode.Z) && (Time.time > nextKeyRotateTime)) //左回転
+        {
+            activeBlock.RotateLeft();
+            nextKeyRotateTime = Time.time + nextKeyRotateInterval;
+
+            if (!board.CheckPosition(activeBlock))
+            {
+                activeBlock.RotateRight();
+            }
+        }
+        else if (Input.GetKey(KeyCode.W) && (Time.time > nextKeyHardUpTime)) //ハードドロップ
+        {
+            nextKeyHardUpTime = Time.time + nextKeyHardUpInterval;
+            HardDrop();
+        }
+        else if (Input.GetKey(KeyCode.S) && (Time.time > nextKeyDownTime) //基本的にここが実行される
+            || (Time.time > nextdropTimer))
         {
             activeBlock.MoveDown(); //下に動かす
 
-            nextKeyDownTimer = Time.time + nextKeyDownInterval;
+            nextKeyDownTime = Time.time + nextKeyDownInterval;
             nextdropTimer = Time.time + dropInterval;
 
             if (!board.CheckPosition(activeBlock))
             {
-                if (board.OverLimit(activeBlock))
+                if (board.OverGrid(activeBlock))
                 {
                     GameOver();
                 }
@@ -147,7 +148,7 @@ public class GameManager : MonoBehaviour
                 {
                     //底に着いた時の処理
                     BottomBoard();
-                }   
+                }
             }
         }       
     }
@@ -159,12 +160,13 @@ public class GameManager : MonoBehaviour
         board.SaveBlockInGrid(activeBlock);
 
         activeBlock = spawner.SpawnBlock();
+        spawner.SetNextBlock();
 
-        nextKeyDownTimer = Time.time;
-        nextKeyLeftRightTimer = Time.time;
-        nextKeyRotateTimer = Time.time;
+        nextKeyDownTime = Time.time;
+        nextKeyLeftRightTime = Time.time;
+        nextKeyRotateTime = Time.time;
 
-        board.ClearAllRows();//埋まっていれば削除する
+        board.ClearAllRows();//ブロックが着地をするたびに、埋まっていないか確認。埋まっていれば削除する
     }
 
     //ゲームオーバーになったらパネルを表示する
@@ -185,5 +187,16 @@ public class GameManager : MonoBehaviour
     public void Restart()
     {
         SceneManager.LoadScene(0);
+    }
+
+    //Wボタンが押されたときに、ハードドロップを起こす
+    public void HardDrop()
+    {
+        do
+        {
+            activeBlock.MoveDown();
+        } while (board.CheckPosition(activeBlock));
+
+        BottomBoard();
     }
 }

@@ -8,50 +8,27 @@ public class Board : MonoBehaviour
     private Transform[,] grid;
 
     [SerializeField]
-    private Transform empty;
-
-    [SerializeField]
     private int height = 30, width = 10, header = 10;
 
     private void Awake()
     {
         grid = new Transform[width, height];
     }
-    private void Start()
-    {
-        CreateBoard();
-    }
 
-    //ボードを生成する関数
-    void CreateBoard()
-    {
-        if (empty)
-        {
-            for (int y = 0; y < height - header; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    Transform clone = Instantiate(empty,
-                        new Vector3(x, y, 0), Quaternion.identity);
-
-                    clone.transform.parent = transform;
-                }
-            }
-        }
-    }
-
-    //ブロックが枠内にあるのか判定する関数
+    //そこが置ける場所かどうか確認する関数
     public bool CheckPosition(Block block)
     {
         foreach (Transform item in block.transform)
         {
             Vector2 pos = Rounding.Round(item.position);
 
+            //枠からはみ出ていないか
             if (!BoardOutCheck((int)pos.x, (int)pos.y)) 
             {
                 return false;
             }
 
+            //他のブロックが既に置かれていないか
             if (BlockCheck((int)pos.x, (int)pos.y, block)) 
             {
                 return false;
@@ -92,11 +69,11 @@ public class Board : MonoBehaviour
     {
         for (int y = 0; y < height; y++)
         {
-            if (IsComplete(y))
+            if (IsComplete(y)) //横を見てチェック
             {
-                ClearRow(y);
+                DeleteRow(y); //その行を消す
 
-                ShiftRowsDown(y + 1);
+                RowsDown(y + 1); //下ろす
 
                 y--;
             }
@@ -118,36 +95,34 @@ public class Board : MonoBehaviour
     }
 
     //削除する関数
-    void ClearRow(int y)
+    void DeleteRow(int y)
     {
         for (int x = 0; x < width; x++)
         {
-            if (grid[x, y] != null)
-            {
-                Destroy(grid[x, y].gameObject);
-            }
+            Destroy(grid[x, y].gameObject);
             grid[x, y] = null;
         }
     }
 
     //上にあるブロックを一段下げる関数
-    void ShiftRowsDown(int startY)
+    void RowsDown(int upperY)
     {
-        for (int y = startY; y < height; y++)
+        for (int y = upperY; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
                 if (grid[x, y] != null)
                 {
-                    grid[x, y - 1] = grid[x, y];
+                    grid[x, y - 1] = grid[x, y]; //シンプルに上の段の情報を下の段に代入
                     grid[x,y] = null;
-                    grid[x, y - 1].position += new Vector3(0, -1, 0);
+                    grid[x, y - 1].position += new Vector3(0, -1, 0); //上の段のTransformがそのまま入っている故、positionが上の段になってしまっているので、一段下げる。
                 }
             }
         }
     }
 
-    public bool OverLimit(Block block)
+    //ブロックが上枠からはみ出たかチェックする関数
+    public bool OverGrid(Block block)
     {
         foreach (Transform item in block.transform)
         {
@@ -159,4 +134,6 @@ public class Board : MonoBehaviour
 
         return false;
     }
+
+    
 }

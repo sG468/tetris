@@ -7,6 +7,11 @@ public class Spawner : MonoBehaviour
     [SerializeField]
     Block[] blocks;
 
+    [SerializeField]
+    private Transform nextBlockPosition; //画面右上の次のブロックタブの座標
+
+    private Block nextBlock; //次のブロックの情報を入れる変数
+
     //ランダムなブロックを1つ選ぶ関数
     Block GetRandomBlock()
     {
@@ -22,19 +27,26 @@ public class Spawner : MonoBehaviour
         }
     }
 
-    //選ばれたブロックを生成する関数
+    //選ばれたブロックをSpawnerにセットする関数
     public Block SpawnBlock()
     {
-        Block block = Instantiate(GetRandomBlock(), transform.position,
-            Quaternion.identity);
+        nextBlock.transform.position = transform.position;
 
-        if (block)
+
+        if (nextBlock)
         {
-            return block;
+            return nextBlock;
         }
         else
         {
             return null;
         }
     }
+
+    //ランダムで生成したブロックを、右上の小窓ウィンドウに表示する関数
+    public void SetNextBlock()
+    {
+        nextBlock = Instantiate(GetRandomBlock(), nextBlockPosition.position, Quaternion.identity);
+    }
+
 }

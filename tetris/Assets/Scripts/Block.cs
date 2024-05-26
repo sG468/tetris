@@ -4,10 +4,6 @@ using UnityEngine;
 
 public class Block : MonoBehaviour
 {
-    //回転していいブロックかどうか
-    [SerializeField]
-    private bool canRotate = true;
-
     //移動関数
     void Move(Vector3 moveDirection)
     {
@@ -38,17 +34,11 @@ public class Block : MonoBehaviour
     //回転用
     public void RotateRight()
     {
-        if (canRotate)
-        {
-            transform.Rotate(0, 0, -90);
-        }
+        transform.Rotate(0, 0, -90);
     }
 
     public void RotateLeft()
     {
-        if (canRotate)
-        {
-            transform.Rotate(0, 0, 90);
-        }
+        transform.Rotate(0, 0, 90);
     }
 }
